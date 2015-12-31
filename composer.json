@@ -1,0 +1,10 @@
+{
+  "require": {
+  },
+  "autoload": {
+    "psr-4": {
+      "Jack\\": "app/"
+    },
+    "files": ["app/config/config.php"]
+  }
+}
