@@ -4,11 +4,11 @@ namespace Jack\Controller;
 use Jack\Model\Home;
 use Jack\System\JackController;
 
-class HomeController extends JackController
+class HomeController
 {
     public function index(){
 
-        return $this->view('home');
+        echo 'home';
     }
 
 }

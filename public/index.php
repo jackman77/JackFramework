@@ -1,8 +1,8 @@
 <?php
-use Jack\System\JackCore;
+use Jack\System\Core;
 
 require ('../vendor/autoload.php');
 
-$app = new JackCore();
+$app = new Core();
 
 $app->run();
