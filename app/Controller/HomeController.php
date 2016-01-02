@@ -8,7 +8,7 @@ class HomeController extends JackController
 {
     public function index(){
 
-        Home::getTable();
+        return $this->view('home');
     }
 
 }
