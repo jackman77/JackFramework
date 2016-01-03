@@ -5,16 +5,12 @@ use Jack\System\Route as Route;
 
 Route::get('', function(){
 
-   $a = [1 => 2, 2=>3, 3=>4, 5=>6];
-   $a = json_encode($a);
-   echo $a;
+   echo 'welcome';
 });
 
-Route::get('/var/{var}', function($var){
-   echo $var;
+
+Route::error(function(){
+   echo '404';
 });
-
-Route::get('/asd', 'HomeController@index');
-
 
 Route::dispatch();

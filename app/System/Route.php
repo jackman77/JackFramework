@@ -5,11 +5,10 @@ namespace Jack\System;
 class Route
 {
 
-
     static $uri = [];
     static $method = [];
     static $action = [];
-    static $var = [];
+    static $error;
 
     // masukan list route ke list
     public static function __callStatic($method, $action)
@@ -17,6 +16,12 @@ class Route
         array_push(static::$method, strtoupper($method));
         array_push(static::$uri, $action[0]);
         array_push(static::$action, $action[1]);
+    }
+
+    // fungsi 404
+
+    public static function error($err){
+        static::$error = $err;
     }
 
 
@@ -33,46 +38,55 @@ class Route
         // cek list routes dgn url yang masuk
 
         if (in_array($uri, static::$uri)) {
-
             $no = array_keys(static::$uri, $uri);
-
             if (static::$method[$no[0]] == $method) {
                 // return object / function
                 if (is_object(static::$action[$no[0]])) {
                     return call_user_func(static::$action[$no[0]]);
                 }
                 // return controller
-
                 $expl = explode('@', static::$action[$no[0]]);
                 $namespace = "Jack\\Controller\\" . $expl[0];
                 $controller = new $namespace();
                 return $controller->$expl[1]();
-
             }
-
-
         }
 
         $x = 0;
         // looping list route
         foreach (static::$uri as $route) {
-            // replace { }
-            if (strpos($route, '{') !== false) {
-                $route = preg_replace('/{(.*?)}/', '[^/]+', $route);
-            }
+            if (static::$method[$x] == $method) {
 
-            // cari pake regex
-            if (preg_match('#^' . $route . '$#', $uri, $match)){
+                // replace { }
+                if (strpos($route, '{') !== false) {
+                    $route = preg_replace('/{(.*?)}/', '([^/]+)', $route);
+                }
 
-                var_dump($match);
+                // cari pake regex
+                if (preg_match('#^' . $route . '$#', $uri, $var)) {
+
+                    // hapus array no 0
+                    array_shift($var);
+
+                    if (is_object(static::$action[$x])) {
+                        // call object + insert variable
+                        return call_user_func_array(static::$action[$x],$var);
+                    }
+
+
+                    // call controller + insert variable
+                    $expl = explode('@', static::$action[$x]);
+                    $namespace = "Jack\\Controller\\" . $expl[0];
+                    $controller = new $namespace();
+                    return call_user_func_array([$controller, $expl[1]], $var);
+                }
             }
 
 
             $x++;
         }
-
-
-
+        // call 404
+        return call_user_func(static::$error);
 
     }
 }
