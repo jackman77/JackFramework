@@ -20,7 +20,8 @@ class Route
 
     // fungsi 404
 
-    public static function error($err){
+    public static function error($err)
+    {
         static::$error = $err;
     }
 
@@ -48,6 +49,7 @@ class Route
                 $expl = explode('@', static::$action[$no[0]]);
                 $namespace = "Jack\\Controller\\" . $expl[0];
                 $controller = new $namespace();
+
                 return $controller->$expl[1]();
             }
         }
@@ -70,21 +72,19 @@ class Route
 
                     if (is_object(static::$action[$x])) {
                         // call object + insert variable
-                        return call_user_func_array(static::$action[$x],$var);
+                        return call_user_func_array(static::$action[$x], $var);
                     }
-
-
                     // call controller + insert variable
                     $expl = explode('@', static::$action[$x]);
                     $namespace = "Jack\\Controller\\" . $expl[0];
                     $controller = new $namespace();
+
                     return call_user_func_array([$controller, $expl[1]], $var);
                 }
             }
-
-
             $x++;
         }
+
         // call 404
         return call_user_func(static::$error);
 
