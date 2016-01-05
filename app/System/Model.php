@@ -8,6 +8,8 @@ abstract class Model
     protected $conn;
     protected $table;
     private $lastID;
+    private $fetchmode = 0;
+    private $counter = 0;
 
     //variabel hasil
     protected $result;
@@ -17,6 +19,8 @@ abstract class Model
     private $select = [];
     private $where = [];
     private $join = [];
+    private $orderBy = [];
+    private $limit;
 
     //binding values
     private $bind = [];
@@ -57,33 +61,6 @@ abstract class Model
         }
     }
 
-    // eksekusi query gabungan
-    public function get(){
-
-        $query = (!empty($this->select)) ? $this->select : "SELECT * FROM $this->table";
-        // gabung select
-        foreach ($this->select as $select){
-
-        }
-        // gabung where
-        foreach ($this->where as $where){
-            $query .= $where;
-        }
-
-        $sql = $this->conn->prepare($query);
-
-        foreach ($this->bind as $key => &$value){
-            $sql->bindParam("$key", $value);
-        }
-
-        $sql->execute();
-
-        $this->result = $sql->fetchAll(\PDO::FETCH_ASSOC);
-        return $this->result;
-
-    }
-
-
     public function find($id)
     {
         $sql = $this->conn->prepare("SELECT * FROM " . $this->table . " WHERE id = :id");
@@ -91,26 +68,166 @@ abstract class Model
         $sql->execute();
 
         $this->result = $sql->fetch(\PDO::FETCH_ASSOC);
+
         return $this->result;
+    }
+
+    public function all()
+    {
+        $this->where = null;
+        $this->limit = null;
+
+        return $this->get();
+    }
+
+    public function first()
+    {
+
+        if (!empty($this->where) && !empty($this->join)) {
+            $this->fetchmode = 1;
+        } else {
+            $this->fetchmode = 1;
+
+            return $this->get();
+        }
+
+        return $this;
+    }
+
+    // eksekusi query gabungan
+    public function get()
+    {
+
+
+        if (empty($this->select)) {
+            $query = "SELECT * FROM $this->table";
+        } else {
+            $query = "SELECT " . implode(',', $this->select) . " FROM $this->table";
+        }
+
+        if ($this->join) {
+            foreach ($this->join as $join) {
+                $query .= $join;
+            }
+        }
+
+        if ($this->where) {
+            foreach ($this->where as $where) {
+                $query .= $where;
+            }
+        }
+
+        if ($this->orderBy) {
+            foreach ($this->orderBy as $orderBy) {
+                $query .= $orderBy;
+            }
+        }
+
+
+        if (!empty($this->limit)) {
+            $query .= " LIMIT $this->limit";
+        }
+
+
+        $sql = $this->conn->prepare($query);
+
+        foreach ($this->bind as $key => &$value) {
+            $sql->bindParam("$key", $value);
+        }
+
+        $sql->execute();
+        if ($this->fetchmode) {
+            $this->result = $sql->fetch(\PDO::FETCH_ASSOC);
+        } else {
+            $this->result = $sql->fetchAll(\PDO::FETCH_ASSOC);
+        }
+
+
+        $this->query = $query;
+
+        return $this->result;
+
+    }
+
+    public function select($field)
+    {
+        if (is_array($field)) {
+            foreach ($field as $fl) {
+                array_push($this->select, $fl);
+            }
+        }
+
+        return $this;
+    }
+
+
+    public function join($column, $field1, $field2, $operator = null)
+    {
+        if (is_null($operator)) {
+            $operator = "=";
+        } else {
+            $temp = $operator;
+            $operator = $field2;
+            $field2 = $temp;
+        }
+        array_push($this->join, " INNER JOIN $column ON $field1 $operator $field2");
+
+        return $this;
+
     }
 
     // where function
     public function where($column, $value, $operator = null)
     {
         // setting operator jika null atau tidak
-        (!isset($operator)) ?: $value = $operator;$operator = "=";
+        if (is_null($operator)) {
+            $operator = "=";
+        } else {
+            $temp = $operator;
+            $operator = $value;
+            $value = $temp;
+        }
+
+
+        $coll = preg_replace('/[^A-Za-z0-9\-]/', '', $value);
 
         // cek where empty
-        if (empty($this->where)){
-            $this->where = [" WHERE $column $operator :0$value"];
-            $this->bind = [":0$value" => $value];
-        }else{
-            $this->where = [" AND WHERE $column $operator :0$value"];
-            $this->bind = [":0$value" => $value];
+        if (empty($this->where)) {
+            array_push($this->where, " WHERE $column $operator :$this->counter$coll");
+            $this->bind[":$this->counter$coll"] = $value;
+        } else {
+            array_push($this->where, " AND $column $operator :$this->counter$coll");
+            $this->bind[":$this->counter$coll"] = $value;
         }
+        $this->counter++;
+
         return $this;
     }
 
+    public function orderBy($column, $type)
+    {
+
+        if (strtoupper($type) == 'ASC' || strtoupper($type) == 'DESC') {
+            if (empty($this->orderBy)) {
+                array_push($this->orderBy, " ORDER BY $column $type");
+            } else {
+                array_push($this->orderBy, " , $column $type");
+            }
+            $this->counter++;
+        }
+
+        return $this;
+
+    }
+
+    public function limit($int)
+    {
+        if (is_int($int)) {
+            $this->limit = $int;
+        }
+
+        return $this;
+    }
 
 
     // insert dengan model tabel
@@ -120,7 +237,7 @@ abstract class Model
             $column = implode(',', array_keys($data));
             $values = ':' . implode(',:', array_keys($data));
 
-            $sql = $this->conn->prepare("INSERT INTO " . $this->table . " ( $column ) VALUES ( $values )");
+            $sql = $this->conn->prepare("INSERT INTO $this->table ( $column ) VALUES ( $values )");
             foreach ($data as $key => &$value) {
                 $sql->bindParam(":$key", $value);
             }
@@ -128,6 +245,82 @@ abstract class Model
 
             $this->lastID = $this->conn->lastInsertId();
             $this->find($this->lastID);
+
+        }
+
+
+    }
+
+    public function save()
+    {
+        if ($this->result) {
+            $query = "UPDATE $this->table SET ";
+            $x = 0;
+            foreach ($this->result as $key => $value) {
+
+                if ($x == count($this->result) - 1) {
+                    $query .= "$key = :$this->counter$value ";
+                    $this->bind[":$this->counter$value"] = $value;
+                } elseif (strtolower($key) !== 'id') {
+
+                    $query .= "$key = :$this->counter$value, ";
+                    $this->bind[":$this->counter$value"] = $value;
+                }
+                $this->counter++;
+                $x++;
+
+            }
+            if ($this->where) {
+                foreach ($this->where as $where) {
+                    $query .= $where;
+                }
+            } else {
+                $query .= "WHERE id = $this->id";
+            }
+            $sql = $this->conn->prepare($query);
+
+            foreach ($this->bind as $key => &$value) {
+                $sql->bindParam("$key", $value);
+            }
+
+            $sql->execute();
+            $this->find($this->id);
+
+        }
+
+    }
+
+    public function delete($id = null){
+
+        if ($this->result && $id == null) {
+            $id = $this->id;
+            $query = "DELETE FROM $this->table WHERE id = :id";
+            $sql = $this->conn->prepare($query);
+            $sql->bindParam(':id',$id);
+            $sql->execute();
+            return $this;
+        }
+
+        if (is_int($id)){
+            $query = "DELETE FROM $this->table WHERE id = :id";
+            $sql = $this->conn->prepare($query);
+            $sql->bindParam(':id',$id);
+            $sql->execute();
+            return $this;
+        }
+
+        if ($this->where){
+            $query = "DELETE FROM $this->table";
+            foreach ($this->where as $where) {
+                $query .= $where;
+            }
+            $sql = $this->conn->prepare($query);
+            foreach ($this->bind as $key => &$value) {
+                $sql->bindParam("$key", $value);
+            }
+            $sql->execute();
+            return $this;
+
 
         }
 
