@@ -11,6 +11,7 @@ class Route
     static $method = [];
     static $action = [];
     static $error;
+    static $result;
 
     // masukan list route ke list
     public static function __callStatic($method, $action)
@@ -20,6 +21,7 @@ class Route
         array_push(static::$action, $action[1]);
     }
 
+
     // fungsi 404
 
     public static function error($err)
@@ -27,6 +29,9 @@ class Route
         static::$error = $err;
     }
 
+    public static function result(){
+        return self::$result;
+    }
 
     // dispatch dari url yg masuk
     public static function dispatch()
@@ -37,6 +42,7 @@ class Route
 
         // bersihkan uri
         $uri = rtrim(preg_replace('~/+~', '/', $uri), '/');
+        $uri = (!empty($uri)) ?: $uri = '/';
 
         // cek list routes dgn url yang masuk
 
@@ -45,14 +51,17 @@ class Route
             if (static::$method[$no[0]] == $method) {
                 // return object / function
                 if (is_object(static::$action[$no[0]])) {
-                    return call_user_func(static::$action[$no[0]]);
+                    static::$result =  call_user_func(static::$action[$no[0]]);
+                    return;
                 }
                 // return controller
                 $expl = explode('@', static::$action[$no[0]]);
                 $namespace = "Jack\\Controller\\" . $expl[0];
                 $controller = new $namespace();
 
-                return $controller->$expl[1]();
+                static::$result = $controller->$expl[1]();
+                return;
+
             }
         }
 
@@ -74,14 +83,16 @@ class Route
 
                     if (is_object(static::$action[$x])) {
                         // call object + insert variable
-                        return call_user_func_array(static::$action[$x], $var);
+                        static::$result = call_user_func_array(static::$action[$x], $var);
+                        return;
                     }
                     // call controller + insert variable
                     $expl = explode('@', static::$action[$x]);
                     $namespace = "Jack\\Controller\\" . $expl[0];
                     $controller = new $namespace();
 
-                    return call_user_func_array([$controller, $expl[1]], $var);
+                    static::$result = call_user_func_array([$controller, $expl[1]], $var);
+                    return;
                 }
             }
             $x++;
