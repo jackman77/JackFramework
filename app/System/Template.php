@@ -1,112 +1,125 @@
 <?php
 namespace Jack\System;
 
-// modified from https://github.com/adamtomecek/Template
+class Template
+{
 
-class Template{
-
-    private $layout;
-
-    public $vars = array();
-    public function __construct($layout = NULL){
-
-        if(!empty($layout)){
-            $this->layout = $layout;
-        }
-        return $this;
-    }
-    public function getVars(){
-        return $this->vars;
-    }
-    public function &__get($key){
-        if (array_key_exists($key, $this->vars)) {
-            return $this->vars[$key];
-        }
-    }
-
-    public function __set($key, $val){
-        $this->vars[$key] = $val;
-    }
-
-    private function compile($file){
-        if(is_file($file)){
-            $keys = array(
-                '@if {%%}' => '<?php if (\1): ?>',
-                '@elseif {%%}' => '<?php ; elseif (\1): ?>',
-                '@for {%%}' => '<?php for (\1): ?>',
-                '@foreach {%%}' => '<?php foreach (\1): ?>',
-                '@while {%%}' => '<?php while (\1): ?>',
-                '@endif' => '<?php endif; ?>',
-                '@endforeach' => '<?php endforeach; ?>',
-                '@endfor' => '<?php endfor; ?>',
-                '@endwhile' => '<?php endwhile; ?>',
-                '@else' => '<?php ; else: ?>',
-                '{{$%% = %%}}' => '<?php $\1 = \2; ?>',
-                '{{$%%++}}' => '<?php $\1++; ?>',
-                '{{$%%--}}' => '<?php $\1--; ?>',
-                '{{$%%}}' => '<?php echo $\1; ?>',
-                '@php' => '<?php',
-                '@endphp' => '?>',
-                '@include {%%}' => '<?php $parent = (dirname(dirname(__FILE__))."/Views/"); include ($parent."\1.jack.php"); ?>'
-            );
-
-            foreach ($keys as $key => $val) {
-                $patterns[] = '#' . str_replace('%%', '(.+)',
-                        preg_quote($key, '#')) . '#U';
-                $replace[] = $val;
-            }
-            $content = self::minify(preg_replace($patterns, $replace, file_get_contents($file)));
-
-            return $content;
-
-        }else{
-            return ("Template tidak ada : '$file'.");
-        }
-    }
-    public function setLayout($layout){
-        $this->layout = $layout;
-        return $this;
-    }
+    private $result;
+    private $var = [];
 
 
-    public function setup($layout){
-        $this->setLayout($layout);
-        return $this;
-    }
-
-    public function render(){
-
-        if(!empty($this->layout)){
-            if(is_file($this->layout)){
-                $template = $this->compile($this->layout);
-            }else{
-                return ("Template tidak ada : '".$this->layout."'.");
-            }
-        }else{
-            $template = $this->compile($this->file);
-        }
-        return $this->evaluate($template, $this->getVars());
-    }
-
-    public static function minify($content)
+    public function __set($name, $value)
     {
-        $search = array(
-            '/\>[^\S ]+/s',
-            '/[^\S ]+\</s',
-            '/(\s)+/s'
-        );
-        $replace = array(
-            '>',
-            '<',
-            '\\1'
-        );
-        return preg_replace($search, $replace, $content);
+        array_push($this->var, [$name => $value]);
     }
 
-    private function evaluate($code, array $variables = NULL){
-        if($variables != NULL){
-            extract($variables);
+
+    public function load($file)
+    {
+        $viewdir = dirname(dirname(__FILE__)) . '/Views/';
+        $this->viewdir = dirname(dirname(__FILE__)) . '/Views/';
+
+        $files = file_get_contents($viewdir . $file . ".jack.php");
+        $this->result = $files;
+
+        return $this;
+    }
+
+    public function parseInclude()
+    {
+        if (strpos($this->result, '@include') !== false) {
+
+            $viewdir = dirname(dirname(__FILE__)) . '/Views/';
+            // ambil include
+            preg_match_all('/@include.*\((.*)\)/', $this->result, $match);
+
+
+            // masukan variable per include
+            $x = 0;
+            foreach ($match[1] as $incl) {
+                // remove quotes
+                $incl = str_replace('"', "", $incl);
+                $incl = str_replace("'", "", $incl);
+
+
+                // ambil include
+                $file = file_get_contents($viewdir . $incl . ".jack.php");
+
+
+                // replace dengan include
+                $this->result = str_replace($match[0][$x], $file, $this->result);
+
+                $x++;
+            }
+
+            // kembali ke parse
+            return $this->parse();
+
+
         }
-        return eval('?>' . $code);
+    }
+
+    public function parse($incl = null)
+    {
+        // parse include jika ada
+        if (strpos($this->result, '@include') !== false) {
+            $this->parseInclude();
+        }
+        $keys = array(
+            '@if(%%)' => '<?php if (\1): ?>',
+            '@if%%(%%)' => '<?php if (\2): ?>',
+            '@elseif(%%)' => '<?php ; elseif (\1): ?>',
+            '@elseif%%(%%)' => '<?php ; elseif (\2): ?>',
+            '@foreach(%%)' => '<?php foreach (\1): ?>',
+            '@foreach%%(%%)' => '<?php foreach (\2): ?>',
+            '@for(%%)' => '<?php for (\1): ?>',
+            '@for%%(%%)' => '<?php for (\2): ?>',
+            '@while(%%)' => '<?php while (\1): ?>',
+            '@while%%(%%)' => '<?php while (\2): ?>',
+            '@endif' => '<?php endif; ?>',
+            '@endforeach' => '<?php endforeach; ?>',
+            '@endfor' => '<?php endfor; ?>',
+            '@endwhile' => '<?php endwhile; ?>',
+            '@else' => '<?php ; else: ?>',
+            '{{%%=%%}}' => '<?php \1 = \2; ?>',
+            '{{%%++%%}}' => '<?php \1++; ?>',
+            '{{%%--%%}}' => '<?php \1--; ?>',
+            '{{%%}}' => '<?php echo \1; ?>',
+            '@php' => '<?php',
+            '@endphp' => '?>'
+        );
+
+        foreach ($keys as $key => $val) {
+            $patterns[] = '#' . str_replace('%%', '(.+)',
+                    preg_quote($key, '#')) . '#U';
+            $replace[] = $val;
+        }
+
+        $this->result = preg_replace($patterns, $replace, $this->result);
+
+        return $this->compile();
+
+    }
+
+    public function compile()
+    {
+        if ($this->var) {
+            foreach ($this->var as $var) {
+                extract($var);
+            }
+        }
+        ob_start();
+        eval("?>$this->result");
+        $this->result = ob_get_contents();
+        ob_end_clean();
+
+        return $this;
+    }
+
+    public function result()
+    {
+        $this->parse();
+
+        return $this->result;
     }
 }
