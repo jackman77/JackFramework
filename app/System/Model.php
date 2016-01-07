@@ -204,6 +204,64 @@ abstract class Model
         return $this;
     }
 
+    public function whereIn($column, $array)
+    {
+        if (is_array($array)) {
+            $col = null;
+            $total = count($array);
+            $x = 0;
+
+            foreach ($array as $arr) {
+                if ($x == $total - 1) {
+                    $col .= ":$this->counter";
+                } else {
+                    $col .= ":$this->counter,";
+                }
+                $this->bind[":$this->counter"] = $arr;
+                $x++;
+                $this->counter++;
+
+            }
+        }
+
+        if (empty($this->where)) {
+            array_push($this->where, " WHERE $column IN ($col)");
+        } else {
+            array_push($this->where, " AND $column IN ($col)");
+        }
+
+        return $this;
+    }
+
+    public function whereNotIn($column, $array)
+    {
+        if (is_array($array)) {
+            $col = null;
+            $total = count($array);
+            $x = 0;
+
+            foreach ($array as $arr) {
+                if ($x == $total - 1) {
+                    $col .= ":$this->counter";
+                } else {
+                    $col .= ":$this->counter,";
+                }
+                $this->bind[":$this->counter"] = $arr;
+                $x++;
+                $this->counter++;
+
+            }
+        }
+
+        if (empty($this->where)) {
+            array_push($this->where, " WHERE $column NOT IN ($col)");
+        } else {
+            array_push($this->where, " AND $column NOT IN ($col)");
+        }
+
+        return $this;
+    }
+
     public function orderBy($column, $type)
     {
 
@@ -235,12 +293,28 @@ abstract class Model
     {
         if (is_array($data)) {
             $column = implode(',', array_keys($data));
-            $values = ':' . implode(',:', array_keys($data));
 
-            $sql = $this->conn->prepare("INSERT INTO $this->table ( $column ) VALUES ( $values )");
-            foreach ($data as $key => &$value) {
-                $sql->bindParam(":$key", $value);
+            $total = count($data);
+            $values = '';
+            for ($x = 0; $x <= $total; $x++) {
+                if ($x == $total - 1) {
+                    $values .= ':' . $this->counter;
+                    break;
+                }
+                $values .= ':' . $this->counter . ',';
+                $this->counter++;
             }
+
+            $query = "INSERT INTO $this->table ( $column ) VALUES ( $values )";
+            $sql = $this->conn->prepare($query);
+
+            $x = $this->counter - $total + 1;
+
+            foreach ($data as $key => &$value) {
+                $sql->bindParam(":$x", $value);
+                $x++;
+            }
+
             $sql->execute();
 
             $this->lastID = $this->conn->lastInsertId();
@@ -290,26 +364,29 @@ abstract class Model
 
     }
 
-    public function delete($id = null){
+    public function delete($id = null)
+    {
 
         if ($this->result && $id == null) {
             $id = $this->id;
             $query = "DELETE FROM $this->table WHERE id = :id";
             $sql = $this->conn->prepare($query);
-            $sql->bindParam(':id',$id);
+            $sql->bindParam(':id', $id);
             $sql->execute();
+
             return $this;
         }
 
-        if (is_int($id)){
+        if (is_int($id)) {
             $query = "DELETE FROM $this->table WHERE id = :id";
             $sql = $this->conn->prepare($query);
-            $sql->bindParam(':id',$id);
+            $sql->bindParam(':id', $id);
             $sql->execute();
+
             return $this;
         }
 
-        if ($this->where){
+        if ($this->where) {
             $query = "DELETE FROM $this->table";
             foreach ($this->where as $where) {
                 $query .= $where;
@@ -319,12 +396,23 @@ abstract class Model
                 $sql->bindParam("$key", $value);
             }
             $sql->execute();
+
             return $this;
 
 
         }
 
 
+    }
+
+    public function result()
+    {
+        return $this->result;
+    }
+
+    public function query()
+    {
+        return $this->query;
     }
 
 
