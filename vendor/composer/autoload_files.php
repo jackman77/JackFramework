@@ -6,5 +6,6 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
+    '7cca0da9604df282f16d129f538c9833' => $vendorDir . '/digitalnature/php-ref/ref.php',
     'd165b7e858aa071d9edb17b454d7044b' => $baseDir . '/app/config/config.php',
 );

@@ -1,5 +1,6 @@
 {
   "require": {
+    "digitalnature/php-ref": "^1.2"
   },
   "autoload": {
     "psr-4": {

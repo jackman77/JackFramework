@@ -9,6 +9,10 @@ return array(
     'Jack\\Controller\\Admin\\AdminController' => $baseDir . '/app/Controller/Admin/AdminController.php',
     'Jack\\Controller\\HomeController' => $baseDir . '/app/Controller/HomeController.php',
     'Jack\\Model\\Home' => $baseDir . '/app/Model/Home.php',
+    'Jack\\System\\Controller' => $baseDir . '/app/System/Controller.php',
     'Jack\\System\\Core' => $baseDir . '/app/System/Core.php',
+    'Jack\\System\\Model' => $baseDir . '/app/System/Model.php',
+    'Jack\\System\\Request' => $baseDir . '/app/System/Request.php',
     'Jack\\System\\Route' => $baseDir . '/app/System/Route.php',
+    'Jack\\System\\Template' => $baseDir . '/app/System/Template.php',
 );

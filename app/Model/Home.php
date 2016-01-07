@@ -1,9 +1,10 @@
 <?php
 namespace Jack\Model;
 
-use Jack\System\JackModel;
+use Jack\System\Model;
 
-class Home extends JackModel{
+class Home extends Model{
 
     protected $table = 'tes';
+
 }
