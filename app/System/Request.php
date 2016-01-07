@@ -47,7 +47,15 @@ class Request
 
     public function __get($name)
     {
-        return $this->var[$name];
+        if (isset($this->var[$name])) {
+            return $this->var[$name];
+        }
+
+    }
+
+    public function all()
+    {
+        return $this->var;
     }
 
     public static function cleanxss($data)
