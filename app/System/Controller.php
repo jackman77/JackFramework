@@ -1,12 +1,12 @@
 <?php
 namespace Jack\System;
 
-use Jack\System\Template;
-
-
-abstract class Controller
+class Controller
 {
     private $template;
+    public $request;
+    public $err = [];
+
 
     public function view($name)
     {
@@ -27,6 +27,27 @@ abstract class Controller
         }
 
         return $this;
+
+    }
+
+    public function validate($array = null)
+    {
+
+        $validate = new Validation();
+
+        if (is_array($array)) {
+            foreach ($array as $key => $value) {
+                $validate->$key = strtolower($value);
+            }
+        }
+
+        $validate->run();
+        $this->request = $validate->request;
+        if ($validate->error) {
+            $this->err = $validate->error;
+        }
+
+        return;
 
     }
 
