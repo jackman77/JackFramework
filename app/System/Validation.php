@@ -8,7 +8,7 @@ class Validation
     public $array = [];
     public $error = [];
     public $confirmation = [];
-    private $request;
+    public $request;
 
     public function __construct()
     {
@@ -18,6 +18,14 @@ class Validation
     public function __set($name, $value)
     {
         $this->array[$name] = $value;
+    }
+
+    public function __get($name)
+    {
+        if (isset($this->request->var[$name])) {
+            return $this->request->var[$name];
+        }
+
     }
 
     public function run()
@@ -52,7 +60,12 @@ class Validation
             }
 
         }
-        jj($this->error);
+        $data = [
+            'err' => $this->error,
+            'request' => $this->request
+        ];
+
+        return $data;
 
     }
 
@@ -79,8 +92,8 @@ class Validation
 
     public function confirmation($key)
     {
-        $conf = str_replace('_confirmation','',$key);
-        if ($this->request->$key != $this->request->$conf){
+        $conf = str_replace('_confirmation', '', $key);
+        if ($this->request->$key != $this->request->$conf) {
             $this->error[$key][] = "This $key must same with $conf";
         }
     }
@@ -101,17 +114,18 @@ class Validation
         }
     }
 
-    public function unique($key,$vl){
+    public function unique($key, $vl)
+    {
         $min = explode(':', $vl);
-        $expl = explode(',',$min[1]);
+        $expl = explode(',', $min[1]);
 
-        $namespace = 'Jack\\Model\\'.ucfirst($expl[0]);
+        $namespace = 'Jack\\Model\\' . ucfirst($expl[0]);
 
         $model = new $namespace;
 
-        $model->where($expl[1],$this->request->$key)->get();
+        $model->where($expl[1], $this->request->$key)->get();
 
-        if ($model->result()){
+        if ($model->result()) {
             $reqq = $this->request->$key;
             $this->error[$key][] = "This $reqq already taken.";
         }
