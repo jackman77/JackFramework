@@ -86,6 +86,7 @@ class Template
             '{{%%--%%}}' => '<?php \1--; ?>',
             '{{%%}}' => '<?php echo \1; ?>',
             '@php' => '<?php',
+            'csrf()' => '$csrf->csrf()',
             '@endphp' => '?>'
         );
 
@@ -109,6 +110,7 @@ class Template
             }
         }
         ob_start();
+        $csrf = new Csrf();
         eval("?>$this->result");
         $this->result = ob_get_contents();
         ob_end_clean();
