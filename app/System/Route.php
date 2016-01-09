@@ -37,16 +37,18 @@ class Route
     public static function dispatch()
     {
 
+
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         $method = $_SERVER['REQUEST_METHOD'];
 
         // bersihkan uri
         $uri = rtrim(preg_replace('~/+~', '/', $uri), '/');
-        $uri = (!empty($uri)) ?: $uri = '/';
+        (!empty($uri)) ?: $uri = '/';
 
         // cek list routes dgn url yang masuk
 
         if (in_array($uri, static::$uri)) {
+
             $no = array_keys(static::$uri, $uri);
             if (static::$method[$no[0]] == $method) {
                 // return object / function
