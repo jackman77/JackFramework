@@ -6,6 +6,7 @@ function object($array){
     }
     return;
 }
+
 function jj($dump){
     return var_dump($dump);
 }
